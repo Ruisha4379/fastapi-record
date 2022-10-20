@@ -1,5 +1,5 @@
 ## MongoDB Instructions
-*(skip this section and see below for MySQL Instructions if coming from MySQL course)*
+*Source: https://github.com/nax3t/aws-cloud9-instructions/blob/master/README.md*
 
 - Enter `touch mongodb-org-3.6.repo` into the terminal
 - Now open the **mongodb-org-3.6.repo** file in your code editor (select it from the left-hand file menu) and paste the following into it then save the file:
@@ -34,4 +34,3 @@ chmod a+x mongod # allow the access to mongod
 - Open a new terminal and type `mongo`, the mongo shell is opened
 - Type show `dbs`, we can see the admin, local and config 
 
-That's it! You're all set :)
