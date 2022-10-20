@@ -23,13 +23,15 @@ sudo yum install -y mongodb-org
 - Change directories back into root ~ by entering `cd` into the terminal then enter the following commands:
 
 ```
-mkdir data
+mkdir data # create a environment for mongod
 echo 'mongod --dbpath=data --nojournal' > mongod
-chmod a+x mongod
+chmod a+x mongod # allow the access to mongod
 ```
 
-- Now test mongod with `./mongod`
+- Now type `cd` and test mongod with `./mongod`
 - Remember, you must first enter `cd` to change directories into root ~ before running `./mongod`
 - Don't forget to shut down ./mongod with `ctrl + c` each time you're done working
+- Open a new terminal and type `mongo`, the mongo shell is opened
+- Type show `dbs`, we can see the admin, local and config 
 
 That's it! You're all set :)
