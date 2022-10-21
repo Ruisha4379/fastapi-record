@@ -1,5 +1,5 @@
 """
-POST some data to the endpoint and meanwhile save it into mongoDB.
+POST data to API endpoint meanwhile save it to MongDB
 """
 # Illustrates basic usage of FastAPI w/ MongoDB
 from pymongo import MongoClient
@@ -8,11 +8,12 @@ from pydantic import BaseModel
 from typing import List
 import uvicorn
 import json
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 client = MongoClient()
-
-DB = "sw_data"
-MSG_COLLECTION = "messages"
+db = "sw_data"
+col = "messages" # database collection
 # Message class defined in Pydantic
 class Message(BaseModel):
     channel: str
@@ -25,19 +26,24 @@ app = FastAPI()
 def post_message(message: Message):
     """Post a new message to the specified channel."""
     with MongoClient() as client:
-        msg_collection = client[DB][MSG_COLLECTION]
-        insert_result = msg_collection.insert_one(message.dict())
+        msg_col = client[db][col]
+        insert_result = msg_col.insert_one(message.dict())
         msg_content = Message(**message.dict())
         ack = insert_result.acknowledged
-        print (msg_collection)
+        #print (msg_col)
         print(insert_result)
         print(msg_content)
+        
+        for doc in msg_col.find():
+            pp.pprint(doc) # pretty print the returned documents
         return {"Data insertion": ack}
         
 if __name__ == '__main__':
-    #it will run on port 3000 and it can receive traffic from anywhere
+    #it will run on port 8000 and it can receive traffic from anywhere
     uvicorn.run(app,debug=True,port=8000,host='0.0.0.0')
-    
-# Type `mongto` in the environment
-# Type `show dbs` to see all the db created
-# To show detail content of a collection: https://stackoverflow.com/questions/24985684/mongodb-show-all-contents-from-all-collections 
+# How to varify the data input from the POST endpoint is successfully insert into the mongoDB:     
+# Step 1: Tyep `$ ./mongod` at the root path
+# Step 2: Type `mongto` in the environment path to run in the mongo shell 
+# Step 3: Type `show dbs` to see all the db created in the mongo shell
+# Step 4: Type `use sw_data` to enter the db created
+# Step 5: Type 'db.messages.find()' to check the content of the collection inserted
