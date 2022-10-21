@@ -19,9 +19,10 @@ pp = pprint.PrettyPrinter(indent=4)
 app = FastAPI() 
 connect(db = "vpp_data", host="localhost", port = 27017)
 
-
 @app.get("/query/vpptree")
 def get_vpp():
+    # map to json is critical, othervise the get method cannot recognize the document
+    # defined in the models.py to map the data collection "create_vpp" 
     vpp = json.loads(Create_vpp.objects().to_json()) # return all the employee docs
     #vpp = Create_vpp.objects()
     print(vpp)
