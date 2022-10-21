@@ -4,7 +4,7 @@ Get data created from MongoDB database "vpp_data" collection of "create_vpp".
 from pymongo import MongoClient
 from fastapi import FastAPI, status
 from pydantic import BaseModel
-from models import Create_vpp
+from models import Create_vpp # a seperate module to map the data schema in MongoDB, alignment of key, value of data collection 
 from mongoengine import connect #connect to mongodb 
 from typing import List
 import uvicorn
