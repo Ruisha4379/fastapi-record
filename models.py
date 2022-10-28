@@ -8,8 +8,22 @@ class Create_vpp(Document):
     # name = StringField(max_len=100)
     # age = IntField()
     # teams= ListField()
-    name = StringField
-    vpp_id = StringField
-    status= StringField
-    market_id= StringField
-    market_type= StringField
+    Name = StringField
+    VPP_ID = StringField
+    Market_Type = StringField
+    Control_Area = StringField
+    Communication_Protocol = StringField
+    Flex_Up_Cost = StringField
+    Flex_Down_Cost = StringField
+    Flex_Up_Capacity = StringField
+    Flex_Down_Capacity = StringField 
+    Description = StringField
+    Sites = StringField
+
+class Create_sites(Document):
+    Name = StringField
+    Site_ID = StringField
+    Site_address = StringField
+    Assogned_VPP = StringField
+    Description = StringField
+    Market_resource = StringField
