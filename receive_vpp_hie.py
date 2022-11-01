@@ -1,5 +1,6 @@
 """
-Date: 2022-10-31
+Date: 2022-11-01
+By Sai Wei
 Tasks:
 1. Create the POST endpoint to receive data sent from UI
 2. Meanwhile get the json data sent from UI
@@ -49,21 +50,22 @@ class Sites(BaseModel):
     Market_resource: str
     
 @app.post("/create_vpp")
-async def get_created_vpp(request: Request):
+async def get_created_vpp(request: Request): #request: Request
     body = await request.json()
+    #body = await Request.json()
     #json.loads take a string as input and returns a dictionary as output.
     #obj = json.loads(body)
-    print(body)
+    #print(body)
     #Extract the vpp name from the data send by create vpp form UI
     db = body['Name']
     print("VPP name extracted is",db)
     with MongoClient() as client:
         msg_col = client[db][col_vpp]
         msg_content = VPP(**body)
-        print('msg_col type is:', type(msg_col))
+        #print('msg_col type is:', type(msg_col))
         insert_result = msg_col.insert_one(msg_content.dict())
         #Print the lastes inserted collection:
-        print('The latest inserted collection is')
+        print('The latest inserted VPP metadata collection is')
         #List the collection in msg_col sorted based on vpp_name
         for doc in msg_col.find().sort('Name',-1).limit(1):
             pp.pprint(doc) # pretty print the returned documents
@@ -73,11 +75,13 @@ async def get_created_vpp(request: Request):
 @app.post("/create_sites")
 async def get_created_sites(request: Request):
     body_site = await request.json()
+# def get_created_sites(request: Request):    
+#     body_site = request.json()
     print(body_site)
-    print(type(body_site)) # type of obj is dict
-    site_rename = body_site['Name']
+    #print(type(body_site)) # type of obj is dict
+    site_name = body_site['Name']
     site_vpp    = body_site['Assigned_VPP']
-    print(site_vpp)
+    print("The VPP assigned for " + site_name + " is:", site_vpp)
     with MongoClient() as client:
         msg_col = client[site_vpp][col_site]
         msg_content = Sites(**body_site)
@@ -87,17 +91,21 @@ async def get_created_sites(request: Request):
             pp.pprint(doc)
     return body_site
 
-connect(db = "VppDemo1", host="localhost", port = 27017)
-@app.get("/get_vpp")
-def get_vpp():
+
+@app.get("/get_vpp/{vpp_name}") # User input the VPP name to extract the VPP metadata
+def get_vpp(vpp_name:str):
+    print(vpp_name)
+    connect(db = vpp_name, host="localhost", port = 27017)
     vpp = json.loads(Vpp_metadata.objects().to_json()) # return all the docs in db collection
     #vpp = Create_vpp.objects()
     pp.pprint(vpp)
     print(type(vpp)) # print the types of var
     return {"VPP created":  vpp} # retun to the client
     
-@app.get("/get_sites")
-def get_sites():
+@app.get("/get_sites/{vpp_name}") # User input the VPP name to extract the list of sites
+def get_sites(vpp_name:str):
+    print(vpp_name)
+    connect(db = vpp_name, host="localhost", port = 27017)
     sites = json.loads(Sites_metadata.objects().to_json()) # return all the docs in db collection
     pp.pprint(sites)
     print(type(sites)) # print the types of var
@@ -106,4 +114,5 @@ def get_sites():
 if __name__ == '__main__':
 #     #it will run on port 8000 and it can receive traffic from anywhere
     uvicorn.run(app,debug=True,port=8000,host='0.0.0.0')
+    
     
