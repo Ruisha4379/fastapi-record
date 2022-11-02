@@ -1,17 +1,24 @@
 """
-Tasks:
-1. Create the POST endpoints to receive data sent from UI for creating of VPP and one site
-2. Meanwhile get the json data sent from UI
-3. Save the vreate_vpp and create_site json data to MongDB
-4. Get the vpp and site created data from the mongDB db created (note the models.py is needed)
+Date: 2022-11-02
+Functions included:
+1. Created the POST/GET endpoints to receive/return the UI created data for vpp, 
+sites and market resources
+2. While POST, the received data is saved to mongoDB with the structure of 
+-vpp[db]
+-- vpp_metadata[col]
+-- site_metadata[col]
+-- market_resource_metada[col]
+3. The GET endpoints for vpp, sites and MR are designed based on the input of the
+vpp_name for accessing the vpp and sites data; input of vpp_name and site_name for
+accessomg MR data.
+
 """
-# Illustrates basic usage of FastAPI w/ MongoDB
+
 from pymongo import MongoClient
 from mongoengine import connect
 from fastapi import FastAPI, status, Request
 from pydantic import BaseModel
-from models import Create_vpp
-from models import Create_sites
+from models_hie import Vpp_metadata, Sites_metadata, MarketResource_metadata
 from typing import Optional, List, Dict, Union
 import uvicorn
 import json
@@ -22,114 +29,138 @@ import asyncio
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
-app = FastAPI()
-connect(db = "vpp_data", host="localhost", port = 27017)
-
-client = MongoClient()
-db = "vpp_data"
-col_vpp = "create_vpp" #database collection
-col_site = "create_sites"
+app      = FastAPI()
+client   = MongoClient()
+#db       = "vpp_data"
+col_vpp  = "vpp_metadata" # for vpp
+col_site = "sites_metadata" # for list of sites
+col_mr   = "market_resource_metadata"
 
 class VPP(BaseModel):
     Name: str
-    VPP_ID: str
-    Market_Type: str#['FR', 'DR', 'Reserve', 'Energy']
-    Control_Area: str#['CAISO','PJM', 'Singapore PSO', 'Chubu']
-    Communication_Protocol: str#['Open ADR', 'Echonetlite', 'IEC 104']
-    Flex_Up_Cost: str
-    Flex_Down_Cost: str
-    Flex_Up_Capacity: str # calculated from the site capacity
-    Flex_Down_Capacity: str # calculated from the site capacity
+    VppID: str
+    MarketType: str#['FR', 'DR', 'Reserve', 'Energy']
+    ControlArea: str#['CAISO','PJM', 'Singapore PSO', 'Chubu']
+    CommunicationProtocol: str#['Open ADR', 'Echonetlite', 'IEC 104']
+    FlexUpCost: str
+    FlexDownCost: str
+    FlexUpCapacity: str # calculated from the site capacity
+    FlexDownCapacity: str # calculated from the site capacity
     Description: str
-    Sites: str # Need to be linked with sites mongodb
+    #Sites: str # Need to be linked with sites mongodb
     
 class Sites(BaseModel):  
     Name:str
-    Site_ID: str
-    Site_address:str
-    Assogned_VPP: str
+    SiteID: str
+    SiteAddress:str
+    AssignedVPP: str
     Description: str
+    #MarketResource: str
+    
+class MR(BaseModel):
+    Name: str           
+    ResourceID: str
+    ResourceType: str   
+    AssignedVPP: str   
+    AssignedSite: str  
+    Description: str    
     
 @app.post("/create_vpp")
-async def get_created_vpp(request: Request):
-#async def get_created_vpp():
+async def get_created_vpp(request: Request): #request: Request
     body = await request.json()
     #json.loads take a string as input and returns a dictionary as output.
     #obj = json.loads(body)
-    print(body)
-    print(type(body)) # type of obj is dict
+    #Extract the vpp name from the data send by create vpp form UI
+    db = body['Name']
+    print("VPP name extracted is",db)
     with MongoClient() as client:
         msg_col = client[db][col_vpp]
         msg_content = VPP(**body)
+        #print('msg_col type is:', type(msg_col))
         insert_result = msg_col.insert_one(msg_content.dict())
-        
-        for doc in msg_col.find():
+        #Print the lastes inserted collection:
+        print('The latest inserted VPP metadata collection is')
+        #List the collection in msg_col sorted based on vpp_name
+        for doc in msg_col.find().sort('Name',-1).limit(1):
             pp.pprint(doc) # pretty print the returned documents
+        
     return body
     
 @app.post("/create_sites")
 async def get_created_sites(request: Request):
     body_site = await request.json()
-    #json.loads take a string as input and returns a dictionary as output.
-    #obj = json.loads(body)
+# def get_created_sites(request: Request):    
+#     body_site = request.json()
     print(body_site)
-    print(type(body_site)) # type of obj is dict
-    
+    #print(type(body_site)) # type of obj is dict
+    site_name = body_site['Name']
+    site_vpp    = body_site['AssignedVPP']
+    print("The VPP assigned for " + site_name + " is:", site_vpp)
     with MongoClient() as client:
-        msg_col = client[db][col_site]
+        msg_col = client[site_vpp][col_site]
         msg_content = Sites(**body_site)
         insert_result = msg_col.insert_one(msg_content.dict())
         
-        for doc in msg_col.find():
-            pp.pprint(doc) # pretty print the returned documents
+        for doc in msg_col.find().sort('Name',-1).limit(1):
+            pp.pprint(doc)
     return body_site
+    
+@app.post("/create_market_resource")
+async def get_created_mr(request: Request):
+    body_mr= await request.json()
+    print(body_mr)
+    #print(type(body_site)) # type of obj is dict
+    mr_name = body_mr['Name']
+    mr_vpp  = body_mr['AssignedVPP']
+    mr_site = body_mr['AssignedSite']
+    print("The VPP assigned for " + mr_name + " is:", mr_vpp)
+    print("The site assigned for " + mr_name + " is:", mr_site)
+    
+    with MongoClient() as client:
+        msg_col = client[mr_vpp][col_mr]
+        msg_content = MR(**body_mr)
+        insert_result = msg_col.insert_one(msg_content.dict())
+        
+        for doc in msg_col.find().sort('Name',-1).limit(1):
+            pp.pprint(doc)
+    return body_mr
 
-@app.get("/get_vpp")
-def get_vpp():
-    vpp = json.loads(Create_vpp.objects().to_json()) # return all the docs in db collection
+################################################################################
+@app.get("/get_vpp/{vpp_name}") # User input the VPP name to extract the VPP metadata
+def get_vpp(vpp_name:str):
+    print(vpp_name)
+    connect(db = vpp_name, host="localhost", port = 27017)
+    vpp = json.loads(Vpp_metadata.objects().to_json()) # return all the docs in db collection
     #vpp = Create_vpp.objects()
     pp.pprint(vpp)
-    #print(vpp)
-    #employees_list = json.loads(employees)
     print(type(vpp)) # print the types of var
     return {"VPP created":  vpp} # retun to the client
     
-@app.get("/get_sites")
-def get_sites():
-    sites = json.loads(Create_sites.objects().to_json()) # return all the docs in db collection
+@app.get("/get_sites/{vpp_name}") # User input the VPP name to extract the list of sites
+def get_sites(vpp_name:str):
+    print(vpp_name)
+    connect(db = vpp_name, host="localhost", port = 27017)
+    sites = json.loads(Sites_metadata.objects().to_json()) # return all the docs in db collection
     pp.pprint(sites)
-    #print(sites)
-    #employees_list = json.loads(employees)
     print(type(sites)) # print the types of var
-    return {"Sites created":  sites} # retun to the client     
-# @app.get("/get_vpp")
-# def get_vpp():
-#     vpp_data = json.loads(create_vpp.objects().to_json()) # return all the docs in db collection
-#     pp.pprint(vpp_data)
-#     print(type(vpp_data)) # print the types of var
-#     return {"VPP created":  vpp_data} # retun to the client
+    return {"Sites created":  sites} # retun to the client
+
+# User input the vpp_name and the site_name to extract the list of MR under the site and vpp 
+@app.get("/get_market_resource/{vpp_name}/{site_name}") 
+def get_mr(vpp_name:str, site_name: str): #/{site_name} 
+    print(vpp_name)
+    print(site_name)
+    connect(db = vpp_name, host="localhost", port = 27017)
+    mrs = json.loads(MarketResource_metadata.objects().to_json()) # return all the docs in db collection
+    print("Type of mrs is ", type(mrs))
+    # Find and return the documents under the market_resource collection with the called site no.
+    mrs_filter = next(
+    (item for item in mrs if item['AssignedSite'] == site_name),{})
     
-# @app.get("/get_sites")
-# def get_sites():
-#     sites_data = json.loads(create_sites.objects().to_json()) # return all the docs in db collection
-#     pp.pprint(sites_data)
-#     #print(sites)
-#     #employees_list = json.loads(employees)
-#     print(type(sites_data)) # print the types of var
-#     return {"Sites created":  sites_data} # retun to the client 
-    
-# import asyncio
-# loop = asyncio.get_event_loop()
-# #await create_vpp.get_created_vpp(Request)
-# #prepare_for_get_created_vpp(Request)
-# #task = loop.create_task(create_vpp.get_created_vpp(Request))
-# #remaining_work_not_depends_on_get_created_vpp(Request)
-# try:
-#     loop.run_until_complete(get_created_vpp())  
-# finally:
-#     loop.close()
+    return {"Market Resources created for site "  + site_name + "are":  mrs_filter} # retun to the client
 
 if __name__ == '__main__':
 #     #it will run on port 8000 and it can receive traffic from anywhere
     uvicorn.run(app,debug=True,port=8000,host='0.0.0.0')
+    
     
